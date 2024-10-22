@@ -22,6 +22,7 @@ const mediaSchema = new mongoose.Schema({
     mediaType: { type: String, enum: ['image', 'video'] },
     filePath: String,
     uploadedAt: { type: Date, default: Date.now },
+    boxIndex: Number,
 });
 
 const Media = mongoose.model('Media', mediaSchema);
@@ -38,7 +39,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 1024 * 1024 * 5 },  // 5MB limit
+    limits: { fileSize: 1024 * 1024 * 10 },  // 5MB limit
     fileFilter: (req, file, cb) => {
         const fileTypes = /jpeg|jpg|png|gif|mp4|mov|avi/;
         const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
@@ -61,14 +62,19 @@ app.post('/upload', upload.single('media'), (req, res) => {
         }
 
         const newMedia = new Media({
-            title: req.body.title,
-            description: req.body.description,
-            mediaType: req.body.mediaType,
-            filePath: req.file.path
+            title: req.body.title || 'Untitled', // Default title if not provided
+            description: req.body.description || '', // Optional description
+            mediaType: req.file.mimetype.startsWith('image') ? 'image' : 'video',
+            filePath: req.file.path,
+            boxIndex: req.body.boxIndex
         });
 
         newMedia.save()
-            .then(() => res.status(200).json({ message: 'File uploaded successfully!' }))
+            .then((savedMedia) => res.status(200).json({
+                message: 'File uploaded successfully!',
+                filePath: savedMedia.filePath,  // Send back file path
+                mediaType: savedMedia.mediaType  // Send back media type
+            }))
             .catch(err => {
                 console.error(err);
                 res.status(500).json({ error: 'Error saving media to the database' });
@@ -80,9 +86,13 @@ app.post('/upload', upload.single('media'), (req, res) => {
 });
 
 
+
 app.get('/media', (req, res) => {
     Media.find()
-        .then(media => res.json(media))
+        .then(media => {
+            console.log(media);  // Log the media items being returned
+            res.json(media);
+        })
         .catch(err => res.status(400).json('Error: ' + err));
 });
 
