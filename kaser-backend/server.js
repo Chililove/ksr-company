@@ -39,20 +39,25 @@ const storage = multer.diskStorage({
 
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 1024 * 1024 * 10 },  // 5MB limit
+    limits: {
+        fileSize: 50 * 1024 * 1024  // Set a maximum file size limit (e.g., 50MB)
+    },
     fileFilter: (req, file, cb) => {
         const fileTypes = /jpeg|jpg|png|gif|mp4|mov|avi/;
         const extname = fileTypes.test(path.extname(file.originalname).toLowerCase());
         const mimetype = fileTypes.test(file.mimetype);
 
         if (extname && mimetype) {
-            return cb(null, true);
+            cb(null, true);
         } else {
-            cb('Error: Images and videos only!');
+            console.error('Invalid file type!', {
+                originalname: file.originalname,
+                mimetype: file.mimetype,
+            });
+            cb(new Error('Invalid file type! Only images and videos are allowed.'));
         }
     }
 });
-
 
 // API Routes
 app.post('/upload', upload.single('media'), (req, res) => {
@@ -62,8 +67,8 @@ app.post('/upload', upload.single('media'), (req, res) => {
         }
 
         const newMedia = new Media({
-            title: req.body.title || 'Untitled', // Default title if not provided
-            description: req.body.description || '', // Optional description
+            title: req.body.title || 'Untitled',
+            description: req.body.description || '',
             mediaType: req.file.mimetype.startsWith('image') ? 'image' : 'video',
             filePath: req.file.path,
             boxIndex: req.body.boxIndex
@@ -72,8 +77,8 @@ app.post('/upload', upload.single('media'), (req, res) => {
         newMedia.save()
             .then((savedMedia) => res.status(200).json({
                 message: 'File uploaded successfully!',
-                filePath: savedMedia.filePath,  // Send back file path
-                mediaType: savedMedia.mediaType  // Send back media type
+                filePath: savedMedia.filePath,
+                mediaType: savedMedia.mediaType
             }))
             .catch(err => {
                 console.error(err);
@@ -84,8 +89,6 @@ app.post('/upload', upload.single('media'), (req, res) => {
         res.status(500).json({ error: 'Server error during file upload' });
     }
 });
-
-
 
 app.get('/media', (req, res) => {
     Media.find()

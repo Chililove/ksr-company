@@ -5,20 +5,6 @@
       <!-- Show if no media is available -->
       <div v-if="media.length === 0">No media available</div>
   
-      <!-- Display gallery of uploaded media -->
-      <!-- <div class="media-grid">
-        <div v-for="item in media" :key="item._id" class="media-item">
-          <h3>{{ item.title }}</h3>
-          <p>{{ item.description }}</p>
-          <div v-if="item.mediaType === 'image'">
-            <img :src="'http://localhost:3000/' + item.filePath" alt="Image" />
-          </div>
-          <div v-else>
-            <video controls :src="'http://localhost:3000/' + item.filePath"></video>
-          </div>
-        </div>
-      </div> -->
-  
       <!-- Pre-made gallery boxes for placing images -->
       <h3>Assign Images to Gallery Slots</h3>
       <div class="image-boxes">
@@ -47,6 +33,7 @@
   
   <script>
   import axios from 'axios';
+  import imageCompression from 'browser-image-compression';
   
   export default {
     name: 'ImageGallery',
@@ -59,45 +46,74 @@
       };
     },
     async mounted() {
-        try {
-        const response = await axios.get('http://localhost:3000/media');
-        this.media = response.data;
-
-        // Assign images to their respective boxes
-        this.media.forEach(item => {
-            if (item.boxIndex !== undefined && item.boxIndex !== null) {
-                this.imageBoxes[item.boxIndex] = {
-                    filePath: item.filePath,
-                    mediaType: item.mediaType,
-                };
-            }
-        });
-    } catch (error) {
-        console.error('Error fetching media', error);
-    }
+      await this.fetchMedia();
     },
     methods: {
+      async fetchMedia() {
+        try {
+          const response = await axios.get('http://localhost:3000/media');
+          this.media = response.data;
+  
+          // Reset image boxes
+          this.imageBoxes = [null, null, null, null];
+  
+          // Assign images to their respective boxes
+          this.media.forEach(item => {
+            if (item.boxIndex !== undefined && item.boxIndex !== null) {
+              this.imageBoxes[item.boxIndex] = {
+                filePath: item.filePath,
+                mediaType: item.mediaType,
+              };
+            }
+          });
+        } catch (error) {
+          console.error('Error fetching media', error);
+        }
+      },
+      
       // Select a gallery box and open file input
       selectBox(index) {
         this.selectedBoxIndex = index;
         this.$refs.fileInput.click(); // Trigger hidden file input
       },
+  
       // Handle file change (when a file is selected)
       async onFileChange(event) {
         this.selectedFile = event.target.files[0];
-        const maxSize = 10 * 1024 * 1024;
-        if (this.selectedFile.size > maxSize){
-            alert('File is too large. Max. is 10MB.');
-            return;
-        }
+  
         if (this.selectedFile) {
-          await this.uploadFile();
+          const isImage = this.selectedFile.type.startsWith('image');
+          const isVideo = this.selectedFile.type.startsWith('video');
+  
+          if (isImage) {
+            const options = {
+              maxSizeMB: 1,
+              maxWidthOrHeight: 1920,
+            };
+            try {
+              const compressedFile = await imageCompression(this.selectedFile, options);
+              this.selectedFile = compressedFile; // Replace original file with the compressed one
+            } catch (error) {
+              console.error('Error during image compression', error);
+              alert('Error during image compression');
+              return;
+            }
+          } 
+            // Log or use the isVideo variable minimally
+    if (isVideo) {
+      console.log('Selected file is a video:', this.selectedFile.name);
+    }
+  
+          if (this.selectedFile) {
+            await this.uploadFile();
+          }
         }
       },
+  
       // Upload selected file and assign it to the selected gallery box
       async uploadFile() {
         const formData = new FormData();
-        formData.append('media', this.selectedFile);
+        formData.append('media', this.selectedFile, this.selectedFile.name);
         formData.append('mediaType', this.selectedFile.type.startsWith('image') ? 'image' : 'video');
         formData.append('boxIndex', this.selectedBoxIndex);
   
@@ -108,16 +124,17 @@
             },
           });
   
-        // Directly assign the uploaded media to the selected box in the array
-        this.imageBoxes[this.selectedBoxIndex] = {
+          console.log('Uploaded file path:', response.data.filePath);
+  
+          // Clear the selected box and immediately update the media array
+          this.imageBoxes[this.selectedBoxIndex] = {
             filePath: response.data.filePath,
             mediaType: response.data.mediaType,
           };
   
-                  // Immediately update the media array to reflect changes without refreshing
-        this.media.push(response.data);
-
-
+          // Fetch updated media to reflect changes
+          await this.fetchMedia();
+  
           this.selectedBoxIndex = null; // Reset selection after upload
         } catch (error) {
           console.error('Error uploading file:', error);
