@@ -21,13 +21,12 @@
       </div>
   
       <!-- Hidden file input for each box -->
-      <input
-        type="file"
-        ref="fileInput"
-        style="display: none;"
-        @change="onFileChange"
-        v-show="true"
-      />
+        <input
+            type="file"
+            ref="fileInput"
+            style="display: none;"
+            @change="onFileChange"
+        />
     </div>
   </template>
   
