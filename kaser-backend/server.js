@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
+require('dotenv').config();
 
 const app = express();
 app.use(cors());
@@ -10,7 +11,7 @@ app.use(express.json());
 app.use('/uploads', express.static('uploads'));  // Static folder for media files
 
 // Connect to MongoDB
-const uri = 'mongodb+srv://louisechililove:Jegelskernegle.2@cluster0.zzefw.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'
+const uri = process.env.MONGO_URI;
 mongoose.connect(uri, {
     useNewUrlParser: true,
     useUnifiedTopology: true,

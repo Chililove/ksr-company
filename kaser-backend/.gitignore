@@ -1,1 +1,17 @@
+# Node modules
 node_modules/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Environment variables
+.env
+
+# Uploads directory (if you choose to ignore uploaded media files)
+uploads/
+
+# Optional: build output directories (if applicable)
+dist/
+build/
