@@ -10,10 +10,13 @@ app.use(express.json());
 app.use('/uploads', express.static('uploads'));  // Static folder for media files
 
 // Connect to MongoDB
-mongoose.connect('mongodb://localhost:27017/mediaDB', {
+const uri = 'mongodb+srv://louisechililove:Jegelskernegle.2@cluster0.zzefw.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'
+mongoose.connect(uri, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
-});
+})
+    .then(() => console.log('Connected to MongoDB'))
+    .catch(err => console.error('MongoDB connection error', err));
 
 // Schema and Model for Media
 const mediaSchema = new mongoose.Schema({
